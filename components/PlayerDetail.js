@@ -7,12 +7,15 @@ export default function PlayerDetail({ route }) {
   const navigation = useNavigation();
   const { player } = route.params;
 
-  // Configura el botón Inicio en la barra superior
   useLayoutEffect(() => {
     navigation.setOptions({
       title: player.name,
       headerRight: () => (
-        <Button title="Inicio" onPress={() => navigation.navigate('Inicio')} />
+        <Button 
+          title="Inicio" 
+          onPress={() => navigation.popToTop()} 
+          color="#fff"
+        />
       ),
     });
   }, []);

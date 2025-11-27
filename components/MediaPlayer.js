@@ -1,20 +1,29 @@
-// components/MediaPlayer.js
 import React, { useRef, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Dimensions } from 'react-native';
+import { View, Button, StyleSheet, Dimensions, Text } from 'react-native';
 import { Video } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
+
+
+
+const videoMap = {
+  "dalenTerry.mp4": require("../assets/videos/dalenTerry.mp4"),
+  "Ayo_Dosunmu.mp4": require("../assets/videos/Ayo_Dosunmu.mp4"),
+  "jalenSmith.mp4": require("../assets/videos/jalenSmith.mp4"),
+  "julianPhillips.mp4": require("../assets/videos/julianPhillips.mp4"),
+  "noaEssengue.mp4": require("../assets/videos/noaEssengue.mp4"),
+  "treJones.mp4": require("../assets/videos/treJones.mp4"),
+};
 
 export default function MediaPlayer() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { videoUrl } = route.params;   // Recibe la URL desde PlayerDetail
-
+  const { videoUrl } = route.params;   
   const videoRef = useRef(null);
   const [status, setStatus] = useState({});
 
   const screenW = Dimensions.get('window').width;
 
-  // Configurar barra superior del reproductor
+  
   useLayoutEffect(() => {
     navigation.setOptions({
       title: "Reproductor",
@@ -27,7 +36,8 @@ export default function MediaPlayer() {
     });
   }, []);
 
-  if (!videoUrl) {
+ 
+  if (!videoUrl || !videoMap[videoUrl]) {
     return (
       <View style={styles.noVideoContainer}>
         <Text style={{color:'gray'}}>No hay video disponible</Text>
@@ -39,8 +49,8 @@ export default function MediaPlayer() {
     <View style={styles.container}>
       <Video
         ref={videoRef}
-        source={{ uri: videoUrl }}
-        style={{ width: screenW - 24, height: 240, backgroundColor: 'black' }}
+        source={videoMap[videoUrl]}
+        style={styles.video}
         useNativeControls={false}
         resizeMode="contain"
         onPlaybackStatusUpdate={s => setStatus(s)}
@@ -78,5 +88,19 @@ const styles = StyleSheet.create({
     flex:1,
     justifyContent:'center',
     alignItems:'center'
-  }
+  },
+  video: {
+  width: '90%',
+  aspectRatio: 16 / 9,
+  backgroundColor: 'black',
+  borderRadius: 12,
+  overflow: 'hidden',
+  alignSelf: 'center',
+  marginTop: 20,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
+}
 });
