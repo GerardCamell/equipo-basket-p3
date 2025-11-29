@@ -1,227 +1,131 @@
 // components/Inicio.js
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  TextInput, 
-  StyleSheet, 
-  ActivityIndicator 
+import {
+    View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, Image
 } from 'react-native';
-
 import { useNavigation } from '@react-navigation/native';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot,
-  limit,
-  startAfter,
-  getDocs
-} from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export default function Inicio() {
-  const navigation = useNavigation();
+    const navigation = useNavigation();
 
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
+    const [players, setPlayers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [lastDoc, setLastDoc] = useState(null);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const [filterBy, setFilterBy] = useState('nombre');
 
-  const [lastDoc, setLastDoc] = useState(null);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
+    useEffect(() => {
+        const q = query(collection(db, 'players'), orderBy('name'), limit(10));
+        const unsub = onSnapshot(q, snapshot => {
+            const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPlayers(arr);
+            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+            setLoading(false);
+        });
+        return () => unsub();
+    }, []);
 
-  // filtros
-  const [searchText, setSearchText] = useState('');
-  const [filterBy, setFilterBy] = useState('nombre');
+    const fetchMore = async () => {
+        if (!lastDoc || isFetchingMore) return;
+        setIsFetchingMore(true);
+        const q = query(collection(db, "players"), orderBy("name"), startAfter(lastDoc), limit(10));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            const newData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPlayers(prev => [...prev, ...newData]);
+            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+        }
+        setIsFetchingMore(false);
+    };
 
-  // primera carga (10 jugadores)
-  useEffect(() => {
-    const q = query(collection(db, 'players'), orderBy('name'), limit(10));
-
-    const unsub = onSnapshot(q, snapshot => {
-      const arr = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      setPlayers(arr);
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-      setLoading(false);
+    const filtered = players.filter(p => {
+        const t = searchText.toLowerCase();
+        if (!t) return true;
+        if (filterBy === 'nombre') return `${p.name} ${p.lastName}`.toLowerCase().includes(t);
+        if (filterBy === 'posicion') return (p.position || '').toLowerCase().includes(t);
+        if (filterBy === 'edad') return String(p.age || '').includes(t);
+        return true;
     });
 
-    return () => unsub();
-  }, []);
-
-  // cargar más datos (infinite scroll)
-  const fetchMore = async () => {
-    if (!lastDoc || isFetchingMore) return;
-
-    setIsFetchingMore(true);
-
-    const q = query(
-      collection(db, "players"),
-      orderBy("name"),
-      startAfter(lastDoc),
-      limit(10)
+    const renderItem = ({ item }) => (
+        <TouchableOpacity
+            style={styles.item}
+            onPress={() => navigation.navigate("Detalle", { player: item })}
+        >
+            <Image
+                source={require('../assets/logo.png')}
+                style={styles.playerLogo}
+            />
+            <View style={styles.itemRow}>
+                <Image
+                    source={{ uri: item.photoURL }}
+                    style={styles.playerPhotoOverlay}
+                />
+                <View style={{ marginLeft: 10, flex: 1 }}>
+                    <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
+                    <Text style={styles.playerInfo}>{item.position} - {item.age} años</Text>
+                </View>
+            </View>
+        </TouchableOpacity>
     );
 
-    const snapshot = await getDocs(q);
-
-    if (!snapshot.empty) {
-      const newData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      setPlayers(prev => [...prev, ...newData]);
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+    if (loading) {
+        return (
+            <View style={styles.loader}>
+                <ActivityIndicator size="large" color="#ff3b3b" />
+                <Text style={{ color: '#555', marginTop: 10 }}>Cargando jugadores...</Text>
+            </View>
+        );
     }
 
-    setIsFetchingMore(false);
-  };
-
-  // filtros
-  const filtered = players.filter(p => {
-    const t = searchText.toLowerCase();
-    if (!t) return true;
-
-    if (filterBy === 'nombre') {
-      return `${p.name} ${p.lastName}`.toLowerCase().includes(t);
-    }
-    if (filterBy === 'posicion') {
-      return (p.position || '').toLowerCase().includes(t);
-    }
-    if (filterBy === 'edad') {
-      return String(p.age || '').includes(t);
-    }
-
-    return true;
-  });
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.item}
-      onPress={() => navigation.navigate("Detalle", { player: item })}
-    >
-      <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
-    </TouchableOpacity>
-  );
-
-  if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large"/>
-        <Text>Cargando jugadores...</Text>
-      </View>
+        <View style={styles.container}>
+            <View style={styles.searchRow}>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Buscar jugador..."
+                    placeholderTextColor="#aaa"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                />
+                <TouchableOpacity style={filterBy === 'nombre' ? styles.filterActive : styles.filterBtn} onPress={() => setFilterBy('nombre')}>
+                    <Text style={styles.filterText}>Nombre</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={filterBy === 'posicion' ? styles.filterActive : styles.filterBtn} onPress={() => setFilterBy('posicion')}>
+                    <Text style={styles.filterText}>Posición</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={filterBy === 'edad' ? styles.filterActive : styles.filterBtn} onPress={() => setFilterBy('edad')}>
+                    <Text style={styles.filterText}>Edad</Text>
+                </TouchableOpacity>
+            </View>
+
+            <FlatList
+                data={filtered}
+                keyExtractor={item => item.id}
+                renderItem={renderItem}
+                onEndReached={fetchMore}
+                onEndReachedThreshold={0.2}
+                ListFooterComponent={isFetchingMore ? <ActivityIndicator size="small" color="#ff3b3b" /> : null}
+            />
+        </View>
     );
-  }
-
-  return (
-    <View style={styles.container}>
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Equipo Basket</Text>
-      </View>
-
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Buscar jugador..."
-          value={searchText}
-          onChangeText={setSearchText}
-        />
-
-        <TouchableOpacity 
-          style={filterBy === 'nombre' ? styles.filterActive : styles.filterBtn}
-          onPress={() => setFilterBy('nombre')}
-        >
-          <Text>Nombre</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={filterBy === 'posicion' ? styles.filterActive : styles.filterBtn}
-          onPress={() => setFilterBy('posicion')}
-        >
-          <Text>Posición</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={filterBy === 'edad' ? styles.filterActive : styles.filterBtn}
-          onPress={() => setFilterBy('edad')}
-        >
-          <Text>Edad</Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        style={styles.list}
-        onEndReached={fetchMore}
-        onEndReachedThreshold={0.2}
-        ListFooterComponent={
-          isFetchingMore ? <ActivityIndicator size="small"/> : null
-        }
-      />
-
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex:1, backgroundColor:'#fff', padding:10 },
-  loader: { flex:1, justifyContent:'center', alignItems:'center' },
-  
-  header: { 
-    paddingVertical:15,
-    alignItems:'center',
-    borderBottomWidth:1,
-    borderColor:'#eee'
-  },
-
-  title: { fontSize:24, fontWeight:'700' },
-
-  searchRow: { 
-    flexDirection:'row', 
-    alignItems:'center',
-    marginTop:15,
-    marginBottom:10
-  },
-
-  input: {
-    flex:1,
-    borderWidth:1,
-    borderColor:'#ccc',
-    padding:8,
-    borderRadius:5,
-    marginRight:5
-  },
-
-  filterBtn: {
-    padding:6,
-    marginLeft:5,
-    borderWidth:1,
-    borderRadius:5
-  },
-
-  filterActive: {
-    padding:6,
-    marginLeft:5,
-    borderWidth:1,
-    borderRadius:5,
-    backgroundColor:'#ddd'
-  },
-
-  list: { marginTop:10 },
-
-  item: {
-    padding:14,
-    borderBottomWidth:1,
-    backgroundColor:'#fafafa',
-    borderColor:'#ddd'
-  },
-
-  playerName: { fontSize:17, fontWeight:'600' }
+    container: { flex: 1, backgroundColor: '#ccc', padding: 10 },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    input: { flex: 1, borderWidth: 1, borderColor: '#999', padding: 8, borderRadius: 5, marginRight: 5, color: '#000', backgroundColor: '#eee' },
+    filterBtn: { padding: 6, marginLeft: 5, borderWidth: 1, borderColor: '#999', borderRadius: 5, backgroundColor: '#ddd' },
+    filterActive: { padding: 6, marginLeft: 5, borderWidth: 1, borderColor: '#ff3b3b', borderRadius: 5, backgroundColor: '#ff9999' },
+    filterText: { color: '#000' },
+    item: { padding: 14, borderBottomWidth: 1, borderColor: '#999', backgroundColor: '#eee', borderRadius: 5, marginBottom: 8, overflow: 'hidden' },
+    itemRow: { flexDirection: 'row', alignItems: 'center', zIndex: 2 },
+    playerName: { fontSize: 17, fontWeight: '600', color: '#333' },
+    playerInfo: { fontSize: 14, color: '#555', marginTop: 2 },
+    playerLogo: { position: 'absolute', left: 14, top: 15, width: 60, height: 60, resizeMode: 'cover', opacity: 0.2, borderRadius: 30, zIndex: 0 },
+    playerPhotoOverlay: { width: 60, height: 60, borderRadius: 30, borderWidth: 1, borderColor: '#999', zIndex: 1 }
 });
