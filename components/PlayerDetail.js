@@ -24,7 +24,7 @@ export default function PlayerDetail({ route }) {
     <ScrollView contentContainerStyle={styles.wrap}>
       <View style={styles.top}>
         {player.headshot && (
-          <Image source={{ uri: player.headshot }} style={styles.headshot} />
+          <Image source={player.headshot} style={styles.headshot} />
         )}
         <View style={styles.info}>
           <Text style={styles.name}>{player.name} {player.lastName}</Text>

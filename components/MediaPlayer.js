@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect } from 'react';
+﻿import React, { useRef, useState, useLayoutEffect } from 'react';
 import { View, Button, StyleSheet, Dimensions, Text } from 'react-native';
 import { Video } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -12,6 +12,7 @@ const videoMap = {
   "julianPhillips.mp4": require("../assets/videos/julianPhillips.mp4"),
   "noaEssengue.mp4": require("../assets/videos/noaEssengue.mp4"),
   "treJones.mp4": require("../assets/videos/treJones.mp4"),
+    "Coby_White.mp4": require("../assets/videos/Coby_White.mp4"),
 };
 
 export default function MediaPlayer() {
@@ -37,13 +38,20 @@ export default function MediaPlayer() {
   }, []);
 
  
-  if (!videoUrl || !videoMap[videoUrl]) {
-    return (
-      <View style={styles.noVideoContainer}>
-        <Text style={{color:'gray'}}>No hay video disponible</Text>
-      </View>
-    );
-  }
+if (!videoUrl || !videoMap[videoUrl]) {
+
+  console.log("⛔ NO HAY VIDEO");
+  console.log("videoUrl:", videoUrl);
+  console.log("videoMap keys:", Object.keys(videoMap));
+  console.log("Existe?", videoMap[videoUrl]);
+
+  return (
+    <View style={styles.noVideoContainer}>
+      <Text style={{color:'gray'}}>No hay video disponible</Text>
+    </View>
+  );
+}
+
 
   return (
     <View style={styles.container}>
