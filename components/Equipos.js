@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Modal, Pressable } from "react-native";
 
 const equiposNBA = [
     { name: "Atlanta Hawks", logo: require("../assets/fotos/logos/atlanta.png") },
@@ -35,6 +35,14 @@ const equiposNBA = [
 ];
 
 export default function Equipos() {
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedLogo, setSelectedLogo] = useState(null);
+
+    const handlePress = (logo) => {
+        setSelectedLogo(logo);
+        setModalVisible(true);
+    };
+
     return (
         <View style={styles.container}>
             <FlatList
@@ -43,19 +51,31 @@ export default function Equipos() {
                 numColumns={3}
                 columnWrapperStyle={{ justifyContent: "space-between" }}
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.card}>
-                        <Image
-                            source={item.logo}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
+                    <TouchableOpacity style={styles.card} onPress={() => handlePress(item.logo)}>
+                        <Image source={item.logo} style={styles.logo} resizeMode="contain" />
                         <Text style={styles.teamName}>{item.name}</Text>
                     </TouchableOpacity>
                 )}
             />
+
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+                    <View style={styles.modalContent}>
+                        {selectedLogo && (
+                            <Image source={selectedLogo} style={styles.modalImage} resizeMode="contain" />
+                        )}
+                    </View>
+                </Pressable>
+            </Modal>
         </View>
     );
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -87,5 +107,20 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "700",
         color: "#333",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        padding: 20,
+        borderRadius: 12,
+    },
+    modalImage: {
+        width: 300,
+        height: 300,
     },
 });

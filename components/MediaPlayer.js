@@ -37,19 +37,19 @@ export default function MediaPlayer() {
   }, []);
 
  
-    if (!videoUrl || !videoMap[videoUrl]) {
+if (!videoUrl || !videoMap[videoUrl]) {
 
-        console.log("⛔ NO HAY VIDEO");
-        console.log("videoUrl:", videoUrl);
-        console.log("videoMap keys:", Object.keys(videoMap));
-        console.log("Existe?", videoMap[videoUrl]);
+  console.log("⛔ NO HAY VIDEO");
+  console.log("videoUrl:", videoUrl);
+  console.log("videoMap keys:", Object.keys(videoMap));
+  console.log("Existe?", videoMap[videoUrl]);
 
-        return (
-            <View style={styles.noVideoContainer}>
-                <Text style={{ color: 'gray' }}>No hay video disponible a</Text>
-            </View>
-        );
-    }
+  return (
+    <View style={styles.noVideoContainer}>
+      <Text style={{color:'gray'}}>No hay video disponible</Text>
+    </View>
+  );
+}
 
 
   return (
