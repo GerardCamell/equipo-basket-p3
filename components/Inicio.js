@@ -14,6 +14,11 @@ const LOCAL_HEADSHOTS = {
     "Jones_Tre.png": require('../assets/HEADSHOTS/Jones_Tre.png'),
     "Phillips_Julian.png": require('../assets/HEADSHOTS/Phillips_Julian.png'),
     "Smith_Jalen.png": require('../assets/HEADSHOTS/Smith_Jalen.png'),
+    "Collins_Zach.png": require('../assets/HEADSHOTS/Collins_Zach.png'),
+    "Dosunmu_Ayo.png": require('../assets/HEADSHOTS/Dosunmu_Ayo.png'),
+    "Giddey_Josh.png": require('../assets/HEADSHOTS/Giddey_Josh.png'),
+    "White_Coby.png": require('../assets/HEADSHOTS/White_Coby.png'),
+    "Vucevic_Nikola.png": require('../assets/HEADSHOTS/Vucevic_Nikola.png'),
    
 };
 
