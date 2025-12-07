@@ -12,6 +12,7 @@ const videoMap = {
   "julianPhillips.mp4": require("../assets/videos/julianPhillips.mp4"),
   "noaEssengue.mp4": require("../assets/videos/noaEssengue.mp4"),
   "treJones.mp4": require("../assets/videos/treJones.mp4"),
+    "Coby_White.mp4": require("../assets/videos/Coby_White.mp4"),
 };
 
 export default function MediaPlayer() {
