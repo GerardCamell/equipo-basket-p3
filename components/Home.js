@@ -33,7 +33,7 @@ export default function Home() {
           style={styles.card}
           onPress={() => navigation.navigate('Inicio')}
         >
-          <Text style={styles.cardText}>📋 Ver jugadores</Text>
+          <Text style={styles.cardText}>📋Ver jugadores</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
