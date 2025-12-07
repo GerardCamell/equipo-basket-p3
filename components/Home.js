@@ -51,6 +51,13 @@ export default function Home() {
         >
           <Text style={styles.cardText}>🎥 Videos destacados</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          style={styles.card}
+          onPress={() => navigation.navigate('FormPlayer')}
+        >
+          <Text style={styles.cardText}>📋Añadir jugador</Text>
+        </TouchableOpacity>
 
       </View>
     </View>

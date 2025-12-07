@@ -96,6 +96,7 @@ export default function Inicio() {
                 </View>
             </View>
         </TouchableOpacity>
+                
     );
     }
 
