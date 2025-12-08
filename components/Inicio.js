@@ -65,12 +65,28 @@ export default function Inicio() {
     });
 
     const renderItem = ({ item }) => {
+        // 1) Intentamos URL remota
+        const isUrl = typeof item.headshot === 'string' && item.headshot.startsWith('http');
+        const urlSource = isUrl ? { uri: item.headshot } : null;
+
+        // 2) Si no hay URL, intenta base64 (JPEG)
+        const base64Source = item.headshotBase64
+            ? { uri: `data:image/jpeg;base64,${item.headshotBase64}` }
+            : null;
+
+        // 3) Si no hay base64, se hace mapeo local por nombre de archivo
         const fileName = item.headshot ? item.headshot.split('/').pop() : '';
-        const headshotPlayer = LOCAL_HEADSHOTS[fileName] || PLACEHOLDER_HEADSHOT;
-        const isPlaceholder = (headshotPlayer === PLACEHOLDER_HEADSHOT);
+        const localSource = LOCAL_HEADSHOTS[fileName] || PLACEHOLDER_HEADSHOT;
+
+        // 4) Fuente final según prioridad
+        const finalSource = urlSource || base64Source || localSource;
+        const isPlaceholder = finalSource === PLACEHOLDER_HEADSHOT;
+
+        
         const playerWithPhoto = {
             ...item,
-            headshot: headshotPlayer,
+            headshot: item.headshot,          // mantiene el valor original (URL o ruta)
+            headshotBase64: item.headshotBase64 || "",
         };
 
         return (
@@ -85,14 +101,14 @@ export default function Inicio() {
                     />
                     <View style={styles.itemRow}>
                         <Image
-                            source={headshotPlayer}
+                            source={finalSource}
                             style={[styles.playerPhotoOverlay, isPlaceholder && styles.placeholderOpacity]}
                         />
                         <View style={{ marginLeft: 10, flex: 1 }}>
                             <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
                             <Text style={styles.playerInfo}>{item.position} - {item.age} años</Text>
 
-                            {/* Editar integrado con el mismo fondo del item */}
+                           
                             <TouchableOpacity
                                 style={styles.editInline}
                                 onPress={() => navigation.navigate("FormPlayer", { player: item })}
@@ -165,9 +181,8 @@ const styles = StyleSheet.create({
     placeholderOpacity: { opacity: 0.05 },
     cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-    // Editar integrado 
     editInline: {
-        backgroundColor: '#eee',      
+        backgroundColor: '#eee',
         borderWidth: 1,
         borderColor: '#e52b2b',
         paddingHorizontal: 10,

@@ -23,9 +23,14 @@ export default function PlayerDetail({ route }) {
   return (
     <ScrollView contentContainerStyle={styles.wrap}>
       <View style={styles.top}>
-        {player.headshot && (
-          <Image source={player.headshot} style={styles.headshot} />
+        {(player.headshot && typeof player.headshot === 'string' && player.headshot.startsWith('http')) ? (
+          <Image source={{ uri: player.headshot }} style={styles.headshot} />
+        ) : player.headshotBase64 ? (
+          <Image source={{ uri: `data:image/jpeg;base64,${player.headshotBase64}` }} style={styles.headshot} />
+        ) : (
+          player.headshot && <Image source={player.headshot} style={styles.headshot} />
         )}
+
         <View style={styles.info}>
           <Text style={styles.name}>{player.name} {player.lastName}</Text>
           <Text>Dorsal: #{player.alias}</Text>
