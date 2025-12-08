@@ -8,7 +8,6 @@ import { collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } fr
 import { db } from '../firebase/config';
 
 const LOCAL_HEADSHOTS = {
-   
     "Terry_Dalen.png": require('../assets/HEADSHOTS/Terry_Dalen.png'),
     "Essengue_Noa.png": require('../assets/HEADSHOTS/Essengue_Noa.png'),
     "Jones_Tre.png": require('../assets/HEADSHOTS/Jones_Tre.png'),
@@ -19,7 +18,6 @@ const LOCAL_HEADSHOTS = {
     "Giddey_Josh.png": require('../assets/HEADSHOTS/Giddey_Josh.png'),
     "White_Coby.png": require('../assets/HEADSHOTS/White_Coby.png'),
     "Vucevic_Nikola.png": require('../assets/HEADSHOTS/Vucevic_Nikola.png'),
-   
 };
 
 const PLACEHOLDER_HEADSHOT = require('../assets/logo.png');
@@ -67,37 +65,66 @@ export default function Inicio() {
     });
 
     const renderItem = ({ item }) => {
-        const fileName = item.headshot ? item.headshot.split('/').pop() : '';
-        const headshotPlayer = LOCAL_HEADSHOTS[fileName] || PLACEHOLDER_HEADSHOT;
-        const isPlaceholder = (headshotPlayer === PLACEHOLDER_HEADSHOT);
-        const playerWithPhoto = {
-        ...item,
-        headshot: headshotPlayer,
-    };
+        // 1) Intentamos URL remota
+        const isUrl = typeof item.headshot === 'string' && item.headshot.startsWith('http');
+        const urlSource = isUrl ? { uri: item.headshot } : null;
 
-    return (
-        
-        <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate("Detalle", { player: playerWithPhoto })}
-        >
-            <Image
-                source={require('../assets/logo.png')}
-                style={styles.playerLogo}
-            />
-            <View style={styles.itemRow}>
-                <Image
-                    source={ headshotPlayer }
-                    style={[styles.playerPhotoOverlay,isPlaceholder && styles.placeholderOpacity]}
-                />
-                <View style={{ marginLeft: 10, flex: 1 }}>
-                    <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
-                    <Text style={styles.playerInfo}>{item.position} - {item.age} años</Text>
-                </View>
+        // 2) Si no hay URL, intenta base64 (JPEG)
+        const base64Source = item.headshotBase64
+            ? { uri: `data:image/jpeg;base64,${item.headshotBase64}` }
+            : null;
+
+        // 3) Si no hay base64, se hace mapeo local por nombre de archivo
+        const fileName = item.headshot ? item.headshot.split('/').pop() : '';
+        const localAsset = LOCAL_HEADSHOTS[fileName] || null;
+        const localSource = localAsset || PLACEHOLDER_HEADSHOT;
+
+        // 4) Fuente final según prioridad (para mostrar en la lista)
+        const finalSource = urlSource || base64Source || localSource;
+        const isPlaceholder = finalSource === PLACEHOLDER_HEADSHOT;
+
+        // 5) Construimos el objeto player que vamos a pasar a Detalle
+        //    - Si la fuente es un asset local, guardamos el require(...) en headshot
+        //    - Si la fuente es base64, guardamos headshotBase64
+        //    - Si la fuente es URL remota, guardamos la URL en headshot
+        const playerWithPhoto = {
+            ...item,
+            // headshot: preferimos pasar el asset require si existe, si no la URL original
+            headshot: localAsset ? localAsset : (isUrl ? item.headshot : (item.headshot || '')),
+            headshotBase64: item.headshotBase64 || "",
+        };
+
+        return (
+            <View style={styles.cardRow}>
+                <TouchableOpacity
+                    style={styles.item}
+                    onPress={() => navigation.navigate("Detalle", { player: playerWithPhoto })}
+                >
+                    <Image
+                        source={require('../assets/logo.png')}
+                        style={styles.playerLogo}
+                    />
+                    <View style={styles.itemRow}>
+                        <Image
+                            source={finalSource}
+                            style={[styles.playerPhotoOverlay, isPlaceholder && styles.placeholderOpacity]}
+                        />
+                        <View style={{ marginLeft: 10, flex: 1 }}>
+                            <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
+                            <Text style={styles.playerInfo}>{item.position} - {item.age} años</Text>
+
+                            <TouchableOpacity
+                                style={styles.editInline}
+                                onPress={() => navigation.navigate("FormPlayer", { player: item })}
+                            >
+                                <Text style={styles.editInlineText}>✎ Editar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
             </View>
-        </TouchableOpacity>
-    );
-    }
+        );
+    };
 
     if (loading) {
         return (
@@ -149,11 +176,28 @@ const styles = StyleSheet.create({
     filterBtn: { padding: 6, marginLeft: 5, borderWidth: 1, borderColor: '#999', borderRadius: 5, backgroundColor: '#ddd' },
     filterActive: { padding: 6, marginLeft: 5, borderWidth: 1, borderColor: '#ff3b3b', borderRadius: 5, backgroundColor: '#ff9999' },
     filterText: { color: '#000' },
-    item: { padding: 14, borderBottomWidth: 1, borderColor: '#999', backgroundColor: '#eee', borderRadius: 5, marginBottom: 8, overflow: 'hidden' },
+    item: { padding: 14, borderBottomWidth: 1, borderColor: '#999', backgroundColor: '#eee', borderRadius: 5, marginBottom: 8, overflow: 'hidden', flex: 1 },
     itemRow: { flexDirection: 'row', alignItems: 'center', zIndex: 2 },
     playerName: { fontSize: 17, fontWeight: '600', color: '#333' },
     playerInfo: { fontSize: 14, color: '#555', marginTop: 2 },
     playerLogo: { position: 'absolute', left: 14, top: 15, width: 60, height: 60, resizeMode: 'cover', opacity: 0.2, borderRadius: 30, zIndex: 0 },
     playerPhotoOverlay: { width: 60, height: 60, borderRadius: 30, borderWidth: 1, borderColor: '#999', zIndex: 1 },
     placeholderOpacity: { opacity: 0.05 },
+    cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+
+    editInline: {
+        backgroundColor: '#eee',
+        borderWidth: 1,
+        borderColor: '#e52b2b',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+        marginTop: 6,
+    },
+    editInlineText: {
+        color: '#e52b2b',
+        fontWeight: '600',
+        fontSize: 14,
+    },
 });
