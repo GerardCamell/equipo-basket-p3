@@ -1,5 +1,5 @@
 ﻿import React, { useRef, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, TouchableOpacity } from 'react-native';
 import { Video } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -25,7 +25,6 @@ export default function MediaPlayer() {
 
   const screenW = Dimensions.get('window').width;
 
-  // 🔥 Obtenemos el nombre del archivo desde la URL
   const fileName = videoUrl ? videoUrl.split("/").pop() : null;
 
   console.log("videoUrl:", videoUrl);
@@ -38,16 +37,14 @@ export default function MediaPlayer() {
     navigation.setOptions({
       title: "Reproductor",
       headerRight: () => (
-        <Button
-          title="Inicio"
-          onPress={() => navigation.navigate("Inicio")}
-        />
+        <TouchableOpacity onPress={() => navigation.navigate("Inicio")}>
+          <Text style={{ color: '#e52b2b', fontWeight: 'bold', marginRight: 10 }}>Inicio</Text>
+        </TouchableOpacity>
       )
     });
   }, []);
 
   
-  // ❌ Si el nombre no coincide con lo que tenemos en el mapa
   if (!fileName || !videoMap[fileName]) {
     return (
       <View style={styles.noVideoContainer}>
@@ -69,15 +66,31 @@ export default function MediaPlayer() {
       />
 
       <View style={styles.controls}>
-        <Button title="Play" onPress={() => videoRef.current?.playAsync()} />
-        <Button title="Pause" onPress={() => videoRef.current?.pauseAsync()} />
-        <Button
-          title="Stop"
+        
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => videoRef.current?.playAsync()}
+        >
+          <Text style={styles.controlText}>▶ Play</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => videoRef.current?.pauseAsync()}
+        >
+          <Text style={styles.controlText}>⏸ Pause</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.controlButton}
           onPress={async () => {
             await videoRef.current?.stopAsync();
             await videoRef.current?.setPositionAsync(0);
           }}
-        />
+        >
+          <Text style={styles.controlText}>⏹ Stop</Text>
+        </TouchableOpacity>
+
       </View>
 
     </View>
@@ -94,9 +107,25 @@ const styles = StyleSheet.create({
   },
   controls: { 
     flexDirection:'row',
-    justifyContent:'space-around', 
-    marginTop: 12, 
-    width:'100%' 
+    justifyContent:'space-evenly',
+    marginTop: 20,
+    width:'100%',
+  },
+  controlButton: {
+    backgroundColor:'#e52b2b',
+    paddingVertical:14,
+    paddingHorizontal:20,
+    borderRadius:50,
+    shadowColor:'#000',
+    shadowOffset:{ width:0, height:3 },
+    shadowOpacity:0.3,
+    shadowRadius:4,
+    elevation:5,
+  },
+  controlText: {
+    color:'#fff',
+    fontSize:16,
+    fontWeight:'700',
   },
   noVideoContainer: {
     flex:1,
