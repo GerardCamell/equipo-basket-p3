@@ -7,7 +7,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -96,6 +96,22 @@ export default function FormPlayer() {
     } catch (err) {
       console.warn('persistVideoLocally fallo:', err);
       return null; // fallback: devolver null para usar la URI original si hace falta
+    }
+  };
+
+  // Borra fichero local si está dentro de documentDirectory/videos
+  const tryDeleteLocalVideoFile = async (videoPath) => {
+    try {
+      if (!videoPath) return;
+      if (videoPath.startsWith(FileSystem.documentDirectory)) {
+        const info = await FileSystem.getInfoAsync(videoPath);
+        if (info.exists) {
+          await FileSystem.deleteAsync(videoPath, { idempotent: true });
+          console.log('Fichero de vídeo local eliminado:', videoPath);
+        }
+      }
+    } catch (err) {
+      console.warn('No se pudo eliminar fichero local:', err);
     }
   };
 
@@ -261,6 +277,44 @@ export default function FormPlayer() {
     }
   };
 
+  // Eliminar jugador (solo en modo edición)
+  const confirmAndDeletePlayer = () => {
+    if (!isEditMode || !playerToEdit?.id) {
+      Alert.alert('No se puede eliminar', 'No hay jugador seleccionado para eliminar.');
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar jugador',
+      `¿Seguro que quieres eliminar a "${playerToEdit.name}"? Esta acción no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              const refDoc = doc(db, 'players', playerToEdit.id);
+              await deleteDoc(refDoc);
+              // Intentamos eliminar fichero local persistido si existe en el campo video
+              const videoPath = playerToEdit.video || newPlayer.video || null;
+              await tryDeleteLocalVideoFile(videoPath);
+              Alert.alert('Jugador eliminado', `Se ha eliminado a "${playerToEdit.name}".`);
+              navigation.navigate('Inicio');
+            } catch (err) {
+              console.error('Error eliminando jugador:', err);
+              Alert.alert('Error', 'No se pudo eliminar el jugador. Intenta de nuevo.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -309,6 +363,18 @@ export default function FormPlayer() {
             color="#ff3b3b"
             disabled={saving}
           />
+
+          {/* Botón Eliminar visible solo en modo edición */}
+          {isEditMode && (
+            <View style={{ marginTop: 12 }}>
+              <Button
+                title={saving ? "Eliminando..." : "Eliminar Jugador"}
+                onPress={confirmAndDeletePlayer}
+                color="#8b0000"
+                disabled={saving}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
