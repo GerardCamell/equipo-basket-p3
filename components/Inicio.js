@@ -76,16 +76,21 @@ export default function Inicio() {
 
         // 3) Si no hay base64, se hace mapeo local por nombre de archivo
         const fileName = item.headshot ? item.headshot.split('/').pop() : '';
-        const localSource = LOCAL_HEADSHOTS[fileName] || PLACEHOLDER_HEADSHOT;
+        const localAsset = LOCAL_HEADSHOTS[fileName] || null;
+        const localSource = localAsset || PLACEHOLDER_HEADSHOT;
 
-        // 4) Fuente final según prioridad
+        // 4) Fuente final según prioridad (para mostrar en la lista)
         const finalSource = urlSource || base64Source || localSource;
         const isPlaceholder = finalSource === PLACEHOLDER_HEADSHOT;
 
-        
+        // 5) Construimos el objeto player que vamos a pasar a Detalle
+        //    - Si la fuente es un asset local, guardamos el require(...) en headshot
+        //    - Si la fuente es base64, guardamos headshotBase64
+        //    - Si la fuente es URL remota, guardamos la URL en headshot
         const playerWithPhoto = {
             ...item,
-            headshot: item.headshot,          // mantiene el valor original (URL o ruta)
+            // headshot: preferimos pasar el asset require si existe, si no la URL original
+            headshot: localAsset ? localAsset : (isUrl ? item.headshot : (item.headshot || '')),
             headshotBase64: item.headshotBase64 || "",
         };
 
@@ -108,7 +113,6 @@ export default function Inicio() {
                             <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
                             <Text style={styles.playerInfo}>{item.position} - {item.age} años</Text>
 
-                           
                             <TouchableOpacity
                                 style={styles.editInline}
                                 onPress={() => navigation.navigate("FormPlayer", { player: item })}
