@@ -1,14 +1,15 @@
 // components/FormPlayer.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import {
+  View, Text, TextInput, Button, StyleSheet, Image, TouchableOpacity, Alert,
+  ScrollView, KeyboardAvoidingView, Platform
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
-import { db, storage } from '../firebase/config';
+import { db } from '../firebase/config';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-
 
 export default function FormPlayer() {
   const navigation = useNavigation();
@@ -34,9 +35,20 @@ export default function FormPlayer() {
     }
   );
 
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null); // uri for preview
+  const [selectedVideo, setSelectedVideo] = useState(null); // either local filename or uri
   const [saving, setSaving] = useState(false);
+
+  // Lista local (debe coincidir con keys de videoMap en MediaPlayer)
+  const localVideos = [
+    "dalenTerry.mp4",
+    "Ayo_Dosunmu.mp4",
+    "jalenSmith.mp4",
+    "julianPhillips.mp4",
+    "noaEssengue.mp4",
+    "treJones.mp4",
+    "Coby_White.mp4"
+  ];
 
   // redimensiona y comprime a JPEG y devuelve base64
   const encodeSelectedImageToBase64 = async () => {
@@ -58,238 +70,255 @@ export default function FormPlayer() {
     }
   };
 
-  // sube el blob de la URI local a Firebase Storage y devuelve la URL pública
-  const uploadHeadshotToStorage = async () => {
-  if (!selectedImage && !newPlayer.headshotBase64) return null;
-
-  // nombre seguro con timestamp
-  const safeName = `${(newPlayer.name || 'player').trim()}_${(newPlayer.lastName || 'photo').trim()}`.replace(/\s+/g, '_');
-  const fileRef = ref(storage, `headshots/${safeName}_${Date.now()}.jpg`);
-
-  // helper para subir con timeout y progreso
-  const uploadWithProgress = (blobOrBytes) => {
-    return new Promise((resolve, reject) => {
-      const uploadTask = uploadBytesResumable(fileRef, blobOrBytes, { contentType: 'image/jpeg' });
-
-      const timeoutId = setTimeout(() => {
-        uploadTask.cancel();
-        reject(new Error('timeout'));
-      }, 60000); // 60s
-
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = snapshot.totalBytes ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100 : 0;
-          console.log('Upload progress:', progress.toFixed(1) + '%');
-        },
-        (error) => {
-          clearTimeout(timeoutId);
-          reject(error);
-        },
-        async () => {
-          clearTimeout(timeoutId);
-          try {
-            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(downloadUrl);
-          } catch (e) {
-            reject(e);
-          }
-        }
-      );
-    });
-  };
-
-  // 1) Intento preferente: subir desde base64 si existe (más fiable en Expo)
-  if (newPlayer.headshotBase64) {
+  // Copia una URI (file:// o content://) a documentDirectory/videos y devuelve la nueva ruta
+  const persistVideoLocally = async (uri) => {
     try {
-      // construimos data URI y hacemos fetch para obtener blob (funciona en RN/Expo)
-      const dataUri = `data:image/jpeg;base64,${newPlayer.headshotBase64}`;
-      const resp = await fetch(dataUri);
-      if (!resp.ok) throw new Error('No se pudo crear blob desde base64');
-      const blob = await resp.blob();
-      const url = await uploadWithProgress(blob);
-      return url;
-    } catch (err) {
-      console.warn('Fallo subida desde base64, intento con URI:', err);
-      // seguimos al fallback
-    }
-  }
+      if (!uri) return null;
 
-  // 2) Fallback: subir desde selectedImage (URI: file:, content:, blob:, http:)
-  if (selectedImage) {
-    try {
-      // validamos URI básica
-      if (
-        !selectedImage.startsWith('file:') &&
-        !selectedImage.startsWith('content:') &&
-        !selectedImage.startsWith('http') &&
-        !selectedImage.startsWith('blob:')
-      ) {
-        throw new Error('URI no válida: ' + selectedImage);
-      }
-
-      const response = await fetch(selectedImage);
-      if (!response.ok) throw new Error('Fetch de URI falló con status ' + response.status);
-
-      let blob;
+      const videosDir = `${FileSystem.documentDirectory}videos/`;
       try {
-        blob = await response.blob();
-      } catch {
-        const arrayBuffer = await response.arrayBuffer();
-        blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+        await FileSystem.makeDirectoryAsync(videosDir, { intermediates: true });
+      } catch (e) {
+        // si ya existe, ignoramos
       }
 
-      const url = await uploadWithProgress(blob);
-      return url;
+      const originalName = uri.split('/').pop() || `video_${Date.now()}.mp4`;
+      const destPath = `${videosDir}${Date.now()}_${originalName}`;
+
+      // downloadAsync suele funcionar con file:// y content:// en Expo Go
+      const { uri: savedUri } = await FileSystem.downloadAsync(uri, destPath);
+
+      const info = await FileSystem.getInfoAsync(savedUri);
+      if (!info.exists) throw new Error('No se pudo guardar el vídeo localmente');
+
+      console.log('Vídeo persistido en:', savedUri, 'size:', info.size);
+      return savedUri;
     } catch (err) {
-      console.error('Fallo subida desde URI:', err);
-      if (err.message === 'timeout') {
-        alert('La subida tardó demasiado (60s). Comprueba tu conexión y vuelve a intentarlo.');
-      } else if (err.code && (err.code.includes('storage') || err.code.includes('unauthorized'))) {
-        alert('Error de permisos en Firebase Storage. Revisa las reglas o la autenticación.');
-      } else {
-        alert('No se pudo subir la imagen: ' + (err.message || 'error desconocido'));
-      }
-      return null;
-    }
-  }
-
-  return null;
-};
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+      console.warn('persistVideoLocally fallo:', err);
+      return null; // fallback: devolver null para usar la URI original si hace falta
     }
   };
 
+  // pickers compatibles con Expo Go (imagen)
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permisos', 'Necesitamos permiso para acceder a la galería.');
+        return;
+      }
+
+      const mediaTypeImage =
+        (ImagePicker.MediaType && ImagePicker.MediaType.IMAGE) ||
+        (ImagePicker.MediaTypeOptions && ImagePicker.MediaTypeOptions.Images) ||
+        ImagePicker.MediaType?.IMAGE ||
+        'Images';
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaTypeImage,
+        quality: 0.7,
+      });
+
+      console.log('pickImage result:', result);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+      } else {
+        console.log('pickImage: usuario canceló o no hay assets');
+      }
+    } catch (err) {
+      console.error('Error en pickImage:', err);
+      Alert.alert('Error', err.message || 'Error al seleccionar la imagen');
+    }
+  };
+
+  // pickVideo combinado: elegir asset local o URI desde galería, con persistencia local
   const pickVideo = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-    });
-    if (!result.canceled) {
-      setSelectedVideo(result.assets[0].uri);
+    try {
+      Alert.alert(
+        'Seleccionar vídeo',
+        'Elige un origen',
+        [
+          {
+            text: 'Vídeo local (recomendado)',
+            onPress: () => {
+              const buttons = localVideos.map(name => ({
+                text: name,
+                onPress: () => {
+                  setSelectedVideo(name);
+                  setNewPlayer(prev => ({ ...prev, video: name }));
+                }
+              }));
+              buttons.push({ text: 'Cancelar', style: 'cancel' });
+              Alert.alert('Vídeos locales', 'Elige uno', buttons);
+            }
+          },
+          {
+            text: 'Galería',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permisos', 'Necesitamos permiso para acceder a la galería.');
+                return;
+              }
+              const mediaType =
+                (ImagePicker.MediaType && ImagePicker.MediaType.VIDEO) ||
+                (ImagePicker.MediaTypeOptions && ImagePicker.MediaTypeOptions.Videos) ||
+                ImagePicker.MediaType?.VIDEO ||
+                'Videos';
+
+              const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: mediaType });
+              console.log('pickVideo (galería) result:', result);
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                const uri = result.assets[0].uri;
+                // Intentamos persistir el fichero en documentDirectory para mayor fiabilidad
+                const persisted = await persistVideoLocally(uri);
+                if (persisted) {
+                  setSelectedVideo(persisted);
+                  setNewPlayer(prev => ({ ...prev, video: persisted }));
+                  Alert.alert('Vídeo guardado localmente', 'El vídeo se ha copiado a la carpeta de la app y se usará esa ruta.');
+                } else {
+                  // Si no se pudo persistir, guardamos la URI original como fallback
+                  setSelectedVideo(uri);
+                  setNewPlayer(prev => ({ ...prev, video: uri }));
+                  Alert.alert('Aviso', 'No se pudo copiar el vídeo; se guardó la URI original. Puede que no sea reproducible en todos los casos.');
+                }
+              }
+            }
+          },
+          { text: 'Cancelar', style: 'cancel' }
+        ],
+        { cancelable: true }
+      );
+    } catch (err) {
+      console.error('Error en pickVideo combinado:', err);
+      Alert.alert('Error', 'No se pudo abrir el selector de vídeo');
     }
   };
 
   const savePlayer = async () => {
-  try {
-    if (isEditMode && !playerToEdit?.id) {
-      alert("No se encontró el ID del jugador para actualizar.");
-      return;
-    }
-    setSaving(true);
+    try {
+      if (isEditMode && !playerToEdit?.id) {
+        Alert.alert("No se encontró el ID del jugador para actualizar.");
+        return;
+      }
+      setSaving(true);
 
-    let headshotUrl = newPlayer.headshot || "";
-    let videoUrl = newPlayer.video || "";
-    let headshotBase64 = newPlayer.headshotBase64 || "";
+      // Mantener valores existentes si no se selecciona nada nuevo
+      let headshotBase64 = newPlayer.headshotBase64 || "";
+      let videoUrl = newPlayer.video || "";
 
-    // Generar base64 comprimido si hay imagen seleccionada
-    if (selectedImage) {
-      const b64 = await encodeSelectedImageToBase64();
-      if (b64) headshotBase64 = b64;
-    }
+      // Generar base64 comprimido si hay imagen seleccionada
+      if (selectedImage) {
+        const b64 = await encodeSelectedImageToBase64();
+        if (b64) headshotBase64 = b64;
+      }
 
-    // Guardar primero en Firestore con base64 (rápido, evita bloqueo)
-    const playerDataPartial = {
-      alias: newPlayer.alias,
-      name: newPlayer.name,
-      lastName: newPlayer.lastName,
-      position: newPlayer.position,
-      age: Number.isFinite(parseInt(newPlayer.age, 10)) ? parseInt(newPlayer.age, 10) : 0,
-      height: newPlayer.height,
-      weight: newPlayer.weight,
-      teams: newPlayer.teams,
-      initials: newPlayer.initials,
-      headshot: headshotUrl,           // puede quedar vacío por ahora
-      headshotBase64: headshotBase64,  // guardamos el base64 ya
-      video: videoUrl
-    };
-
-    if (isEditMode) {
-      const refDoc = doc(db, "players", playerToEdit.id);
-      await updateDoc(refDoc, playerDataPartial);
-    } else {
-      const docRef = await addDoc(collection(db, 'players'), playerDataPartial);
-   
-    }
-
-    // Intento de subida a Storage en background: si falla, no bloquea la UI
-    if (selectedImage) {
-      (async () => {
-        try {
-          const uploadedUrl = await uploadHeadshotToStorage(); 
-          if (uploadedUrl) {
-            // Actualiza solo el campo headshot con la URL
-            const refDoc = doc(db, "players", playerToEdit?.id || /*  */ playerToEdit?.id);
-            if (refDoc) {
-              await updateDoc(refDoc, { headshot: uploadedUrl });
-            }
-          }
-        } catch (e) {
-          console.error('Error en subida background:', e);
+      // Si selectedVideo existe y es un nombre local, lo usamos como asset
+      if (selectedVideo) {
+        if (localVideos.includes(selectedVideo)) {
+          videoUrl = selectedVideo; // nombre del asset
+        } else {
+          // URI desde galería o ruta persistida en documentDirectory
+          videoUrl = selectedVideo;
         }
-      })();
-    }
+      }
 
-    alert(isEditMode ? `Jugador "${newPlayer.name}" actualizado correctamente` : `Jugador "${newPlayer.name}" agregado correctamente`);
-    navigation.navigate('Inicio');
-  } catch (err) {
-    console.error('Error en savePlayer:', err);
-    alert('Error al guardar jugador');
-  } finally {
-    setSaving(false);
-  }
-};
+      const playerDataPartial = {
+        alias: newPlayer.alias,
+        name: newPlayer.name,
+        lastName: newPlayer.lastName,
+        position: newPlayer.position,
+        age: Number.isFinite(parseInt(newPlayer.age, 10)) ? parseInt(newPlayer.age, 10) : 0,
+        height: newPlayer.height,
+        weight: newPlayer.weight,
+        teams: newPlayer.teams,
+        initials: newPlayer.initials,
+        headshot: newPlayer.headshot || '',
+        headshotBase64: headshotBase64,
+        video: videoUrl
+      };
+
+      let currentDocId = playerToEdit?.id;
+
+      if (isEditMode) {
+        const refDoc = doc(db, "players", currentDocId);
+        await updateDoc(refDoc, playerDataPartial);
+      } else {
+        const docRef = await addDoc(collection(db, 'players'), playerDataPartial);
+        currentDocId = docRef.id;
+      }
+
+      Alert.alert(
+        isEditMode ? 'Jugador actualizado' : 'Jugador creado',
+        `Jugador "${newPlayer.name}" ${isEditMode ? 'actualizado' : 'agregado'} correctamente`
+      );
+      navigation.navigate('Inicio');
+    } catch (err) {
+      console.error('Error en savePlayer:', err);
+      Alert.alert('Error al guardar jugador');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{isEditMode ? "Editar Jugador" : "Crear Jugador"}</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.inner}>
+          <Text style={styles.title}>{isEditMode ? "Editar Jugador" : "Crear Jugador"}</Text>
 
-      <TextInput style={styles.input} placeholder="Número" keyboardType="numeric"
-        value={newPlayer.alias} onChangeText={t => setNewPlayer({ ...newPlayer, alias: t })} />
-      <TextInput style={styles.input} placeholder="Nombre"
-        value={newPlayer.name} onChangeText={t => setNewPlayer({ ...newPlayer, name: t })} />
-      <TextInput style={styles.input} placeholder="Apellido"
-        value={newPlayer.lastName} onChangeText={t => setNewPlayer({ ...newPlayer, lastName: t })} />
-      <TextInput style={styles.input} placeholder="Posición"
-        value={newPlayer.position} onChangeText={t => setNewPlayer({ ...newPlayer, position: t })} />
-      <TextInput style={styles.input} placeholder="Edad" keyboardType="numeric"
-        value={String(newPlayer.age)} onChangeText={t => setNewPlayer({ ...newPlayer, age: t })} />
-      <TextInput style={styles.input} placeholder="Altura"
-        value={newPlayer.height} onChangeText={t => setNewPlayer({ ...newPlayer, height: t })} />
-      <TextInput style={styles.input} placeholder="Peso"
-        value={newPlayer.weight} onChangeText={t => setNewPlayer({ ...newPlayer, weight: t })} />
-      <TextInput style={styles.input} placeholder="Equipo"
-        value={newPlayer.teams} onChangeText={t => setNewPlayer({ ...newPlayer, teams: t })} />
-      <TextInput style={styles.input} placeholder="Iniciales"
-        value={newPlayer.initials} onChangeText={t => setNewPlayer({ ...newPlayer, initials: t })} />
+          <TextInput style={styles.input} placeholder="Número" keyboardType="numeric"
+            value={newPlayer.alias} onChangeText={t => setNewPlayer({ ...newPlayer, alias: t })} />
+          <TextInput style={styles.input} placeholder="Nombre"
+            value={newPlayer.name} onChangeText={t => setNewPlayer({ ...newPlayer, name: t })} />
+          <TextInput style={styles.input} placeholder="Apellido"
+            value={newPlayer.lastName} onChangeText={t => setNewPlayer({ ...newPlayer, lastName: t })} />
+          <TextInput style={styles.input} placeholder="Posición"
+            value={newPlayer.position} onChangeText={t => setNewPlayer({ ...newPlayer, position: t })} />
+          <TextInput style={styles.input} placeholder="Edad" keyboardType="numeric"
+            value={String(newPlayer.age)} onChangeText={t => setNewPlayer({ ...newPlayer, age: t })} />
+          <TextInput style={styles.input} placeholder="Altura"
+            value={newPlayer.height} onChangeText={t => setNewPlayer({ ...newPlayer, height: t })} />
+          <TextInput style={styles.input} placeholder="Peso"
+            value={newPlayer.weight} onChangeText={t => setNewPlayer({ ...newPlayer, weight: t })} />
+          <TextInput style={styles.input} placeholder="Equipo"
+            value={newPlayer.teams} onChangeText={t => setNewPlayer({ ...newPlayer, teams: t })} />
+          <TextInput style={styles.input} placeholder="Iniciales"
+            value={newPlayer.initials} onChangeText={t => setNewPlayer({ ...newPlayer, initials: t })} />
 
-      <TouchableOpacity style={styles.btn} onPress={pickImage}>
-        <Text style={styles.btnText}>{selectedImage ? "Cambiar Foto" : "Seleccionar Foto"}</Text>
-      </TouchableOpacity>
-      {selectedImage && <Image source={{ uri: selectedImage }} style={styles.preview} />}
+          <TouchableOpacity style={styles.btn} onPress={pickImage}>
+            <Text style={styles.btnText}>{selectedImage ? "Cambiar Foto" : "Seleccionar Foto"}</Text>
+          </TouchableOpacity>
+          {selectedImage && <Image source={{ uri: selectedImage }} style={styles.preview} />}
 
-      <TouchableOpacity style={styles.btn} onPress={pickVideo}>
-        <Text style={styles.btnText}>{selectedVideo ? "Cambiar Video" : "Seleccionar Video"}</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#0066cc' }]} onPress={pickVideo}>
+            <Text style={styles.btnText}>
+              {selectedVideo ? (localVideos.includes(selectedVideo) ? `Local: ${selectedVideo}` : "URI seleccionada") : "Seleccionar Video"}
+            </Text>
+          </TouchableOpacity>
 
-      <Button
-        title={isEditMode ? (saving ? "Actualizando..." : "Actualizar Jugador") : (saving ? "Creando..." : "Crear Jugador")}
-        onPress={savePlayer}
-        color="#ff3b3b"
-        disabled={saving}
-      />
-    </View>
+          <View style={{ height: 12 }} />
+
+          <Button
+            title={isEditMode ? (saving ? "Actualizando..." : "Actualizar Jugador") : (saving ? "Creando..." : "Crear Jugador")}
+            onPress={savePlayer}
+            color="#ff3b3b"
+            disabled={saving}
+          />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#eee' },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
+  scrollContainer: { flexGrow: 1, padding: 20, backgroundColor: '#eee' },
+  inner: { flex: 1, alignItems: 'stretch' },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
   input: { borderWidth: 1, borderColor: '#999', padding: 8, borderRadius: 5, marginBottom: 10, backgroundColor: '#fff' },
   btn: { backgroundColor: '#049315', padding: 10, borderRadius: 5, marginBottom: 10 },
   btnText: { color: '#fff', textAlign: 'center' },
