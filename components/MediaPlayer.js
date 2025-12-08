@@ -4,16 +4,17 @@ import { Video } from 'expo-av';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 
-
 const videoMap = {
   "dalenTerry.mp4": require("../assets/videos/dalenTerry.mp4"),
+  "zach_collins.mp4": require("../assets/videos/zach_collins.mp4"),
   "Ayo_Dosunmu.mp4": require("../assets/videos/Ayo_Dosunmu.mp4"),
   "jalenSmith.mp4": require("../assets/videos/jalenSmith.mp4"),
   "julianPhillips.mp4": require("../assets/videos/julianPhillips.mp4"),
   "noaEssengue.mp4": require("../assets/videos/noaEssengue.mp4"),
   "treJones.mp4": require("../assets/videos/treJones.mp4"),
-    "Coby_White.mp4": require("../assets/videos/Coby_White.mp4"),
+  "Coby_White.mp4": require("../assets/videos/Coby_White.mp4")
 };
+
 
 export default function MediaPlayer() {
   const navigation = useNavigation();
@@ -23,6 +24,14 @@ export default function MediaPlayer() {
   const [status, setStatus] = useState({});
 
   const screenW = Dimensions.get('window').width;
+
+  // 🔥 Obtenemos el nombre del archivo desde la URL
+  const fileName = videoUrl ? videoUrl.split("/").pop() : null;
+
+  console.log("videoUrl:", videoUrl);
+  console.log("fileName:", fileName);
+  console.log("videoMap keys:", Object.keys(videoMap));
+  console.log("Existe?", fileName ? videoMap[fileName] : "NO");
 
   
   useLayoutEffect(() => {
@@ -37,27 +46,22 @@ export default function MediaPlayer() {
     });
   }, []);
 
- 
-if (!videoUrl || !videoMap[videoUrl]) {
-
-  console.log("⛔ NO HAY VIDEO");
-  console.log("videoUrl:", videoUrl);
-  console.log("videoMap keys:", Object.keys(videoMap));
-  console.log("Existe?", videoMap[videoUrl]);
-
-  return (
-    <View style={styles.noVideoContainer}>
-      <Text style={{color:'gray'}}>No hay video disponible</Text>
-    </View>
-  );
-}
-
+  
+  // ❌ Si el nombre no coincide con lo que tenemos en el mapa
+  if (!fileName || !videoMap[fileName]) {
+    return (
+      <View style={styles.noVideoContainer}>
+        <Text style={{color:'gray'}}>No hay video disponible</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
+      
       <Video
         ref={videoRef}
-        source={videoMap[videoUrl]}
+        source={videoMap[fileName]}
         style={styles.video}
         useNativeControls={false}
         resizeMode="contain"
@@ -75,9 +79,11 @@ if (!videoUrl || !videoMap[videoUrl]) {
           }}
         />
       </View>
+
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { 
@@ -98,17 +104,17 @@ const styles = StyleSheet.create({
     alignItems:'center'
   },
   video: {
-  width: '90%',
-  aspectRatio: 16 / 9,
-  backgroundColor: 'black',
-  borderRadius: 12,
-  overflow: 'hidden',
-  alignSelf: 'center',
-  marginTop: 20,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 5,
-}
+    width: '90%',
+    aspectRatio: 16 / 9,
+    backgroundColor: 'black',
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  }
 });

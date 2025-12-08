@@ -8,22 +8,21 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      
-      <Image 
-        source={require('../assets/logo1.png')}
-        style={styles.logo}
-      />
 
-     
+      <View style={styles.bannerContainer}>
+        <Image 
+          source={require('../assets/logo1.png')}
+          style={styles.logo}
+        />
+      </View>
 
-      <Text style={styles.title}>Bienvenido a la App NBA</Text>
+      <Text style={styles.title}>Bienvenido a la App FRONTCAT NBA</Text>
 
       <Text style={styles.subtitle}>
         Explora estadísticas y detalles de los jugadores, descubre los equipos de la NBA y disfruta de los mejores vídeos y jugadas destacadas. 
         Todo en un solo lugar, fácil de navegar y con información actualizada.
       </Text>
 
-      {/* Separador */}
       <View style={styles.separator} />
 
       <View style={styles.menu}>
@@ -33,7 +32,7 @@ export default function Home() {
           style={styles.card}
           onPress={() => navigation.navigate('Inicio')}
         >
-          <Text style={styles.cardText}>📋Ver jugadores</Text>
+          <Text style={styles.cardText}>📋 Ver jugadores</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -51,12 +50,13 @@ export default function Home() {
         >
           <Text style={styles.cardText}>🎥 Videos destacados</Text>
         </TouchableOpacity>
+
         <TouchableOpacity 
           activeOpacity={0.7}
           style={styles.card}
           onPress={() => navigation.navigate('FormPlayer')}
         >
-          <Text style={styles.cardText}>📋Añadir jugador</Text>
+          <Text style={styles.cardText}>➕ Añadir jugador</Text>
         </TouchableOpacity>
 
       </View>
@@ -69,66 +69,80 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems:'center',
-    paddingTop: 80,   // espacio desde arriba
     backgroundColor:'white',
   },
 
-  logo:{
-    width:160,
-    height:140,
-    marginBottom:15,
+  bannerContainer: {
+  width: '100%',
+  height: 200,
+  backgroundColor: '#ffe2e2',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 25,
+  paddingTop: 50,
+},
+
+  logo: {
+    width: 200,   // tamaño aumentado
+    height: 200,
+    resizeMode: 'contain'
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight:'800',
+    color:'#e52b2b',
+    marginBottom: 10,
+    textAlign:'center',
+    textTransform:'uppercase',
+    letterSpacing: 1,
+  },
+
+  subtitle: {
+    fontSize: 15,
+    color:'#444',
+    marginBottom: 10,
+    textAlign:'center',
+    lineHeight:22,
+    paddingHorizontal:30
   },
 
   separator: {
-    width: '80%',      // ancho de la línea
-    height: 1,         // grosor
-    backgroundColor: '#ccc', // color gris suave
-    marginVertical: 15,     // espacio arriba y abajo
+    width: '70%',
+    height: 2,
+    backgroundColor: '#e52b2b',
+    opacity: 0.5,
+    borderRadius: 10,
+    marginVertical: 20,
   },
 
-  title:{
-    fontSize:26,
-    fontWeight:'bold',
-    color:'#e52b2b',
-    marginBottom:5,
-    textAlign:'center'
-  },
-
-  subtitle:{
-    fontSize:16,
-    color:'#666',
-    marginBottom:25,
-    textAlign:'center',
-    lineHeight:22,
-    paddingHorizontal:20
-  },
-
-  menu:{
+  menu: {
     width:'100%',
-    paddingHorizontal:20,
-    marginTop:10,
+    paddingHorizontal:24,
+    marginTop: 10,
   },
 
-  card:{
+  card: {
     width:'100%',
     backgroundColor:'#e52b2b',
-    paddingVertical:20,
-    borderRadius:10,
-    marginBottom:15,
+    paddingVertical:18,
+    borderRadius: 14,
     alignItems:'center',
     justifyContent:'center',
+    marginBottom: 15,
     shadowColor:'#000',
-    shadowOffset:{ width:0, height:3 },
-    shadowOpacity:0.3,
-    shadowRadius:4,
+    shadowOffset:{ width:0, height:2 },
+    shadowOpacity:0.2,
+    shadowRadius:6,
     elevation:4
   },
 
-  cardText:{
+  cardText: {
     color:'white',
-    fontSize:18,
+    fontSize:17,
     fontWeight:'700',
-    textAlign:'center'
+    textAlign:'center',
+    letterSpacing: 0.4
   }
 
 });
