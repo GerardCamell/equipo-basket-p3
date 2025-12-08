@@ -33,7 +33,7 @@ export default function Home() {
           style={styles.card}
           onPress={() => navigation.navigate('Inicio')}
         >
-          <Text style={styles.cardText}>📋 Ver jugadores</Text>
+          <Text style={styles.cardText}>📋Ver jugadores</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -50,6 +50,13 @@ export default function Home() {
           onPress={() => navigation.navigate('Videos')}
         >
           <Text style={styles.cardText}>🎥 Videos destacados</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          style={styles.card}
+          onPress={() => navigation.navigate('FormPlayer')}
+        >
+          <Text style={styles.cardText}>📋Añadir jugador</Text>
         </TouchableOpacity>
 
       </View>

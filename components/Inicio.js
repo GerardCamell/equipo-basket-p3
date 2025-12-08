@@ -7,9 +7,25 @@ import { useNavigation } from '@react-navigation/native';
 import { collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
+const LOCAL_HEADSHOTS = {
+   
+    "Terry_Dalen.png": require('../assets/HEADSHOTS/Terry_Dalen.png'),
+    "Essengue_Noa.png": require('../assets/HEADSHOTS/Essengue_Noa.png'),
+    "Jones_Tre.png": require('../assets/HEADSHOTS/Jones_Tre.png'),
+    "Phillips_Julian.png": require('../assets/HEADSHOTS/Phillips_Julian.png'),
+    "Smith_Jalen.png": require('../assets/HEADSHOTS/Smith_Jalen.png'),
+    "Collins_Zach.png": require('../assets/HEADSHOTS/Collins_Zach.png'),
+    "Dosunmu_Ayo.png": require('../assets/HEADSHOTS/Dosunmu_Ayo.png'),
+    "Giddey_Josh.png": require('../assets/HEADSHOTS/Giddey_Josh.png'),
+    "White_Coby.png": require('../assets/HEADSHOTS/White_Coby.png'),
+    "Vucevic_Nikola.png": require('../assets/HEADSHOTS/Vucevic_Nikola.png'),
+   
+};
+
+const PLACEHOLDER_HEADSHOT = require('../assets/logo.png');
+
 export default function Inicio() {
     const navigation = useNavigation();
-
     const [players, setPlayers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastDoc, setLastDoc] = useState(null);
@@ -50,10 +66,20 @@ export default function Inicio() {
         return true;
     });
 
-    const renderItem = ({ item }) => (
+    const renderItem = ({ item }) => {
+        const fileName = item.headshot ? item.headshot.split('/').pop() : '';
+        const headshotPlayer = LOCAL_HEADSHOTS[fileName] || PLACEHOLDER_HEADSHOT;
+        const isPlaceholder = (headshotPlayer === PLACEHOLDER_HEADSHOT);
+        const playerWithPhoto = {
+        ...item,
+        headshot: headshotPlayer,
+    };
+
+    return (
+        
         <TouchableOpacity
             style={styles.item}
-            onPress={() => navigation.navigate("Detalle", { player: item })}
+            onPress={() => navigation.navigate("Detalle", { player: playerWithPhoto })}
         >
             <Image
                 source={require('../assets/logo.png')}
@@ -61,8 +87,8 @@ export default function Inicio() {
             />
             <View style={styles.itemRow}>
                 <Image
-                    source={{ uri: item.photoURL }}
-                    style={styles.playerPhotoOverlay}
+                    source={ headshotPlayer }
+                    style={[styles.playerPhotoOverlay,isPlaceholder && styles.placeholderOpacity]}
                 />
                 <View style={{ marginLeft: 10, flex: 1 }}>
                     <Text style={styles.playerName}>{item.name} {item.lastName}</Text>
@@ -70,7 +96,9 @@ export default function Inicio() {
                 </View>
             </View>
         </TouchableOpacity>
+                
     );
+    }
 
     if (loading) {
         return (
@@ -127,5 +155,6 @@ const styles = StyleSheet.create({
     playerName: { fontSize: 17, fontWeight: '600', color: '#333' },
     playerInfo: { fontSize: 14, color: '#555', marginTop: 2 },
     playerLogo: { position: 'absolute', left: 14, top: 15, width: 60, height: 60, resizeMode: 'cover', opacity: 0.2, borderRadius: 30, zIndex: 0 },
-    playerPhotoOverlay: { width: 60, height: 60, borderRadius: 30, borderWidth: 1, borderColor: '#999', zIndex: 1 }
+    playerPhotoOverlay: { width: 60, height: 60, borderRadius: 30, borderWidth: 1, borderColor: '#999', zIndex: 1 },
+    placeholderOpacity: { opacity: 0.05 },
 });

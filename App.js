@@ -8,6 +8,8 @@ import PlayerDetail from './components/PlayerDetail';
 import MediaPlayer from './components/MediaPlayer';
 import Equipos from './components/Equipos';
 import Videos from './components/Videos';
+import FormPlayer from './components/FormPlayer';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -45,13 +47,14 @@ export default function App() {
             ),
           }}
         />
-
+        
         <Stack.Screen name="Equipos" component={Equipos} />
 
         <Stack.Screen name="Videos" component={Videos} />
 
         <Stack.Screen name="Detalle" component={PlayerDetail} />
         <Stack.Screen name="Media" component={MediaPlayer} />
+        <Stack.Screen name="FormPlayer" component={FormPlayer} />
 
       </Stack.Navigator>
     </NavigationContainer>
