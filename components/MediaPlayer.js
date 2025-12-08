@@ -1,6 +1,6 @@
 ﻿import React, { useRef, useState, useLayoutEffect } from 'react';
-import { View, Button, StyleSheet, Dimensions, Text, Platform } from 'react-native';
-import { Video } from 'expo-av';
+import { View, Button, StyleSheet, Text, Platform } from 'react-native';
+import { Video } from 'expo-av';   // ✅ expo-av funciona en Expo Go móvil
 import { useNavigation, useRoute } from '@react-navigation/native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 
@@ -21,9 +21,6 @@ export default function MediaPlayer() {
   const videoRef = useRef(null);
   const [status, setStatus] = useState({});
 
-  const screenW = Dimensions.get('window').width;
-
-  // 🔥 Obtenemos el nombre del archivo desde la URL
   const fileName = videoUrl ? videoUrl.split("/").pop() : null;
 
   useLayoutEffect(() => {
@@ -35,9 +32,8 @@ export default function MediaPlayer() {
     });
   }, [navigation]);
 
-  // YouTube
+  // 👉 Caso YouTube
   if (videoUrl && (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"))) {
-    // extraemos el ID
     let videoId = null;
     if (videoUrl.includes("v=")) {
       videoId = videoUrl.split("v=")[1]?.split("&")[0];
@@ -46,30 +42,24 @@ export default function MediaPlayer() {
     }
 
     if (!videoId) {
-      return (
-        <View style={styles.noVideoContainer}>
-          <Text style={{color:'gray'}}>No se pudo obtener el vídeo de YouTube</Text>
-        </View>
-      );
+      return <Text>No se pudo obtener el vídeo de YouTube</Text>;
     }
 
     if (Platform.OS === "web") {
       const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>Vídeo de YouTube</Text>
-          <div style={{ width:"100%", maxWidth:900, height:500 }}>
-            <iframe
-              src={embedUrl}
-              style={{ width:"100%", height:"100%", border:"none", borderRadius:12 }}
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
-          </div>
-        </View>
+        <div style={{ width:"100%", maxWidth:900, height:500 }}>
+          <iframe
+            src={embedUrl}
+            style={{ width:"100%", height:"100%", border:"none", borderRadius:12 }}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        </div>
       );
     }
 
+    // ✅ En Expo Go móvil
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Vídeo de YouTube</Text>
@@ -78,13 +68,9 @@ export default function MediaPlayer() {
     );
   }
 
-  // ❌ Si el nombre no coincide con lo que tenemos en el mapa
+  // 👉 Caso local/remoto con expo-av
   if (!fileName || !videoMap[fileName]) {
-    return (
-      <View style={styles.noVideoContainer}>
-        <Text style={{color:'gray'}}>No hay video disponible</Text>
-      </View>
-    );
+    return <Text>No hay video disponible</Text>;
   }
 
   return (
@@ -93,29 +79,25 @@ export default function MediaPlayer() {
         ref={videoRef}
         source={videoMap[fileName]}
         style={styles.video}
-        useNativeControls={false}
+        useNativeControls={true}   // ✅ en móvil mejor dejar controles nativos
         resizeMode="contain"
         onPlaybackStatusUpdate={s => setStatus(s)}
       />
       <View style={styles.controls}>
         <Button title="Play" onPress={() => videoRef.current?.playAsync()} />
         <Button title="Pause" onPress={() => videoRef.current?.pauseAsync()} />
-        <Button
-          title="Stop"
-          onPress={async () => {
-            await videoRef.current?.stopAsync();
-            await videoRef.current?.setPositionAsync(0);
-          }}
-        />
+        <Button title="Stop" onPress={async () => {
+          await videoRef.current?.stopAsync();
+          await videoRef.current?.setPositionAsync(0);
+        }} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container:{ flex:1, justifyContent:"center", alignItems:"center", padding:12, backgroundColor:"#000" },
+  container:{ flex:1, justifyContent:"center", alignItems:"center", padding:12 },
   controls:{ flexDirection:'row', justifyContent:'space-around', marginTop:12, width:'100%' },
-  noVideoContainer:{ flex:1, justifyContent:'center', alignItems:'center' },
-  video:{ width:'100%', maxWidth:900, aspectRatio:16/9, backgroundColor:'black', borderRadius:12, overflow:'hidden', alignSelf:'center', marginTop:20 },
+  video:{ width:'90%', aspectRatio:16/9, backgroundColor:'black', borderRadius:12 },
   title:{ color:'#fff', fontWeight:'700', fontSize:22, marginBottom:20, textAlign:'center' }
 });
