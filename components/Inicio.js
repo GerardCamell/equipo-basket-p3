@@ -165,9 +165,9 @@ const styles = StyleSheet.create({
     placeholderOpacity: { opacity: 0.05 },
     cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-    // Editar integrado con el mismo fondo que la tarjeta
+    // Editar integrado 
     editInline: {
-        backgroundColor: '#eee',      // mismo fondo que el item
+        backgroundColor: '#eee',      
         borderWidth: 1,
         borderColor: '#e52b2b',
         paddingHorizontal: 10,
