@@ -6,7 +6,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 const videoMap = {
   "dalenTerry.mp4": require("../assets/videos/dalenTerry.mp4"),
-  "zach_collins.mp4": require("../assets/videos/zach_collins.mp4"),
   "Ayo_Dosunmu.mp4": require("../assets/videos/Ayo_Dosunmu.mp4"),
   "jalenSmith.mp4": require("../assets/videos/jalenSmith.mp4"),
   "julianPhillips.mp4": require("../assets/videos/julianPhillips.mp4"),
