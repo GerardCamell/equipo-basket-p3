@@ -1,0 +1,35 @@
+{
+  "setupTasks": [
+    {
+      "name": "Installing Dependencies",
+      "command": "npm install"
+    }
+  ],
+  "tasks": {
+    "ng": {
+      "name": "ng",
+      "command": "npm run ng",
+      "runAtStart": false
+    },
+    "start": {
+      "name": "start",
+      "command": "npx expo start --tunnel --clear",
+      "runAtStart": true
+    },
+    "build": {
+      "name": "build",
+      "command": "npm run build",
+      "runAtStart": false
+    },
+    "watch": {
+      "name": "watch",
+      "command": "npm run watch",
+      "runAtStart": false
+    },
+    "test": {
+      "name": "test",
+      "command": "npm run test",
+      "runAtStart": false
+    }
+  }
+}
